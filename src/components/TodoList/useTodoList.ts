@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/vue-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { computed, reactive, watch } from "vue";
 
 import * as API from "../../apis/todo-list";
@@ -9,6 +9,7 @@ export default function useTodoList() {
   const route = useRoute();
   const pagination = reactive<Pagination>({ page: 1, limit: 10 });
   const queries = reactive<Queries>({});
+  const queryClient = useQueryClient();
 
   const isActive = computed(() => !!route.name?.toString().includes("Active"));
   const isCompleted = computed(
@@ -19,7 +20,6 @@ export default function useTodoList() {
     isLoading,
     isFetching,
     data: todos,
-    refetch: getTodos,
   } = useQuery({
     initialData: [],
     queryKey: ["todos", { pagination, queries }],
@@ -35,17 +35,29 @@ export default function useTodoList() {
 
   const { mutate: createTodo } = useMutation({
     mutationFn: API.createTodo,
-    onSuccess: getTodos,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["todos", { pagination, queries }],
+      });
+    },
   });
 
   const { mutate: updateTodo } = useMutation({
     mutationFn: (todo: Todo) => API.updateTodo(todo.id, todo),
-    onSuccess: getTodos,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["todos", { pagination, queries }],
+      });
+    },
   });
 
   const { mutate: deleteTodo } = useMutation({
     mutationFn: API.deleteTodo,
-    onSuccess: getTodos,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["todos", { pagination, queries }],
+      });
+    },
   });
 
   watch(
@@ -75,7 +87,6 @@ export default function useTodoList() {
     todos,
     isLoading,
     isFetching,
-    getTodos,
     handleCreateTodo,
     handleToggleTodo,
     handleEditContent,
